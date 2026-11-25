@@ -1,6 +1,6 @@
 <template>
   <div class="sidebar__items">
-    <SidebarItemCheckbox v-if="filter.type == 'checkbox'" :filterList="filter.list"
+    <SidebarItemCheckbox v-if="filter.type == 'checkbox'" :filterList="checkboxList" :counts="counts"
       @updateCheckBoxValue="(item) => updateCheckBoxValue(item, filterIndex)"
       />
 
@@ -45,6 +45,8 @@ export default {
   props: [
     'filter', 
     'filterIndex',
+    // { optionId: works } or null while the project list is loading
+    'counts',
     'optionsFromUrl'
   ],
 
@@ -67,8 +69,15 @@ export default {
       return this.filter.list.filter(option => option.checked === true);
     },
 
+    // Options that give no works with the current filters are hidden; ticked ones always stay.
+    checkboxList() {
+      if (!this.counts) return this.filter.list;
+      return this.filter.list.filter((option) => option.checked || this.counts[option.id]);
+    },
+
     optionsLeft() {
-      return this.filter.list.filter((option) => option.checked === false);
+      return this.filter.list.filter((option) => option.checked === false
+        && (!this.counts || this.counts[option.id]));
     },
   },
 

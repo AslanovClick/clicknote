@@ -99,9 +99,6 @@ export default {
   //   next()
   // }
   
-  updated() {
-    updateProjects();
-  },
 };
 </script>
 

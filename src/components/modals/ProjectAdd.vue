@@ -120,7 +120,7 @@ export default {
 
       this.closeModal();
 
-      updateProjects();
+      updateProjects({ force: true });
     },
 
     setDefaultValues() {

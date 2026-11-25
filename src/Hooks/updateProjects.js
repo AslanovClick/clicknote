@@ -1,26 +1,21 @@
 import {getUrlData} from '@/Hooks/getUrlData'
 import store from '@/store'
+import {parseFilterQuery, filterProjects} from '@/Hooks/projectFilters'
 
-export function updateProjects() {
+// Shows the projects for the current URL filters. Filtering runs on the full list,
+// which is loaded once; if that request fails, the server does the filtering.
+export function updateProjects({ force } = {}) {
   const urlData = getUrlData();
-  const categoryID = +localStorage.getItem('currentDirection');
 
-  if (urlData) {
-    console.log('getProjectsByFilters');
-    store.dispatch('getProjectsByFilters', {query: urlData});
-    localStorage.setItem('currentDirection', -1);
-  
-    return urlData.length ? urlData : 0;
-  }
-  
-  if (categoryID === -1 || localStorage.getItem('currentDirection') === null) {
-    console.log('getProjects'); 
-    store.dispatch('getProjects');
-    
-  } else {
-    console.log('getProjectsByCategoryID');
-    store.dispatch('getProjectsByCategoryID', {categoryID});
-  }
+  if (force || !store.state.allProjects) store.commit('setProjects', {});
 
-  return urlData.length ? urlData : 0;
+  return store.dispatch('loadAllProjects', { force })
+    .then((all) => {
+      // The URL may have changed while the list was loading.
+      store.commit('setProjects', filterProjects(all, parseFilterQuery(getUrlData() || '')));
+    })
+    .catch(() => {
+      if (urlData) return store.dispatch('getProjectsByFilters', {query: urlData});
+      return store.dispatch('getProjects');
+    });
 }

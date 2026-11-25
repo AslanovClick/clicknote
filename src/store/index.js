@@ -1,6 +1,12 @@
 import { createStore } from 'vuex';
 import {API_URL} from '@/store/api_url';
 
+let loadAllProjectsPromise = null;
+
+const PROJECT_CHANGING_ACTIONS = [
+    "createProject", "editProject", "removeProject", "restoreProject", "deleteProject", "setPublic",
+];
+
 export default createStore({
   state: {
     token: {
@@ -100,6 +106,9 @@ export default createStore({
 
     viewProject: {},
 
+    // Every project, unfiltered; the base for client-side filtering and option counts.
+    allProjects: null,
+
     modalEdit: {},
 
     createProjectLoading: 0
@@ -162,6 +171,10 @@ export default createStore({
 
     setProjects(state, projects) {
         state.projects = projects;
+    },
+
+    setAllProjects(state, projects) {
+        state.allProjects = projects;
     },
 
     setArchive(state, projects) {
@@ -657,6 +670,24 @@ export default createStore({
         // })
     },
 
+    // Loads the full list once; later calls reuse it. A failed load can be retried.
+    loadAllProjects({ state, commit }, { force } = {}) {
+        if (state.allProjects && !force) return Promise.resolve(state.allProjects);
+        if (loadAllProjectsPromise && !force) return loadAllProjectsPromise;
+        loadAllProjectsPromise = fetch(`${API_URL}/project/`, {
+            method: "GET",
+            headers: { "X-AUTH-TOKEN": state.token }
+        })
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.errors || !Array.isArray(data.projects)) throw data.errors || new Error("Bad project list");
+            commit("setAllProjects", data.projects);
+            return data.projects;
+        })
+        .finally(() => { loadAllProjectsPromise = null; });
+        return loadAllProjectsPromise;
+    },
+
     getProjectsByFilters({ state, commit }, {query}) {
     // getProjectsByFilters({ commit }) {
         commit('setProjects', {})
@@ -873,6 +904,15 @@ export default createStore({
         commit('addModalEdit', project)
     },
   },
+
+  // Any change to projects makes the cached full list stale.
+  plugins: [
+    (store) => store.subscribeAction({
+      after: (action) => {
+        if (PROJECT_CHANGING_ACTIONS.includes(action.type)) store.commit("setAllProjects", null);
+      },
+    }),
+  ],
 
   modules: {
     // tokenModule

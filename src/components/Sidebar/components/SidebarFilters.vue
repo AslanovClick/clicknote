@@ -13,10 +13,11 @@
       />
 
       <SidebarItems :filter="filter" 
-        :filterIndex="filterIndex" />
+        :filterIndex="filterIndex"
+        :counts="counts[filterIndex]" />
     </div>
   </div>
-  <SidebarButton @click="search" />
+  <SidebarButton :count="resultCount" @click="search" />
 </template>
 
 <script>
@@ -26,6 +27,12 @@ import SidebarHead from "./SidebarHead.vue";
 import SidebarButton from "./SidebarButton.vue";
 import SidebarItems from './SidebarItems.vue';
 import {isMobileScreen} from '@/Hooks/isMobileScreen'
+import {
+  parseFilterQuery,
+  buildFilterQuery,
+  facetCounts,
+  filterProjects,
+} from "@/Hooks/projectFilters";
 
 export default {
   components: {
@@ -36,72 +43,68 @@ export default {
 
   props: ["openMobileFilter"],
 
-  emits: ["sidebarClose", "filter"],
+  emits: ["sidebarClose", "filter", "getFiltersCount", "filtersLoaded", "closeMobileFilter"],
 
   data() {
     return {
-      sidebarOpen: true,
-
-      filtersQuery: {},
-
-      sidebar: null,
-      sidebarScrollElement: null,
-      sidebarHeight: null,
-      sidebarScroll: false,
+      filtersReady: false,
     };
   },
 
   computed: {
     ...mapState({
       filters: (state) => state.sidebarFilters,
-      filtersData: (state) => state.filtersData,
-      users: (state) => state.users,
+      allProjects: (state) => state.allProjects,
     }),
-    
-    searchQuery() {
-      const query = this.objToIdFormat(this.filters);
-      let parsedQuery = "";
 
-      for (let key in query) {
-        if (query[key].length) {
-          query[key].forEach((q, indx) => {
-            parsedQuery += parsedQuery === "" ? `?${key}[${indx}]=${q}` : `&${key}[${indx}]=${q}`;
-          });
-        }
-      }
-
-      return parsedQuery;
+    // What the checkboxes say right now, plus URL facets the sidebar has no group for
+    // (a guest has no "direction" group, but the tabs still filter by it).
+    pendingFilters() {
+      const fromUrl = parseFilterQuery(this.routeSearch);
+      const result = {};
+      Object.keys(fromUrl).forEach((key) => {
+        if (!this.filters[key]) result[key] = fromUrl[key];
+      });
+      Object.keys(this.filters).forEach((key) => {
+        const ids = this.filters[key].list.filter((item) => item.checked).map((item) => item.id);
+        if (ids.length) result[key] = ids;
+      });
+      return result;
     },
 
-    urlQuery() {
-      return window.location.search;
+    searchQuery() {
+      return buildFilterQuery(this.pendingFilters);
+    },
+
+    routeSearch() {
+      const query = this.$route.fullPath.split("?")[1];
+      return query ? `?${query}` : "";
+    },
+
+    visibleProjects() {
+      if (!Array.isArray(this.allProjects)) return null;
+      return isLoggedUser() ? this.allProjects : this.allProjects.filter((project) => project.public);
+    },
+
+    // { scope: { 34: 17, ... }, ... }: works each option would give, other groups applied.
+    counts() {
+      const result = {};
+      Object.keys(this.filters).forEach((key) => {
+        result[key] = this.visibleProjects
+          ? facetCounts(this.visibleProjects, this.pendingFilters, key)
+          : null;
+      });
+      return result;
+    },
+
+    resultCount() {
+      return this.visibleProjects
+        ? filterProjects(this.visibleProjects, this.pendingFilters).length
+        : null;
     },
   },
 
   methods: {
-    objToIdFormat(object) {
-      const result = Object.keys(object).map(key => {
-        return [key, object[key].list.reduce((accum, l) => l.checked === true ? [...accum, l.id] : accum, [])]
-      })
-
-      return Object.fromEntries(result);
-    },
-
-    // "?scope[0]=34&type[0]=5" -> { scope: ["34"], type: ["5"] }
-    parseQuery(query) {
-      const currentFilters = {};
-      new URLSearchParams(query || "").forEach((value, key) => {
-        const currentKey = key.replace(/\[[^\]]*\]/g, "");
-        if (!currentFilters[currentKey]) currentFilters[currentKey] = [];
-        currentFilters[currentKey].push(value);
-      });
-      return currentFilters;
-    },
-
-    optionsLeft(type) {
-      return this.filters[type].list.filter( (option) => option.checked === false );
-    },
-
     getSelectedCount(filterName) {
       return (
         this.filters[filterName].list.length &&
@@ -115,7 +118,6 @@ export default {
 
       for (let key in this.filters) {
         const result = this.getSelectedCount(key);
-        // console.log(this.getSelectedCount(key));
         if (result) {
           counter++;
           if (filterName === key) {
@@ -134,53 +136,57 @@ export default {
     },
 
     updateUrlData() {
+      if (buildFilterQuery(parseFilterQuery(this.routeSearch)) === this.searchQuery) return;
       // A path, not a full URL: vue-router treats "http://..." as a path and lands on 404.
       this.$router.push(`/${this.searchQuery}`);
-
-      // window.location = window.location.origin + "/" + this.searchQuery;
     },
 
-    setFiltersCheckboxes(checkedFilters) {
+    // Ticks exactly the options in the URL, so Back/Forward and the tabs keep the sidebar in step.
+    syncFromUrl() {
+      const fromUrl = parseFilterQuery(this.routeSearch);
       for (let key in this.filters) {
-        if (checkedFilters[key] !== undefined) {
-          const list = checkedFilters[key];
-          list.forEach(filterId => this.$store.commit('updateFilterCheckboxValue', { filterKey: key, filterId: Number(filterId) }))
-        }
+        const ids = fromUrl[key] || [];
+        this.filters[key].list.forEach((item) => {
+          const checked = ids.includes(item.id);
+          if (item.checked !== checked) {
+            this.$store.commit('updateFilterCheckboxValue', { filterKey: key, filterId: item.id, value: checked });
+          }
+        });
+        // A group with a ticked option opens by itself.
+        if (ids.length) this.filters[key].open = true;
       }
-    },
-
-    checkFilterQuery() {
-      const checkedFilters = this.parseQuery(this.urlQuery);
-      console.log('checkedFilters: ', checkedFilters);
-      this.setFiltersCheckboxes(checkedFilters);
     },
 
     search() {
-      // this.checkFilterQuery();
       this.updateUrlData();
-      // updateProjects();
-      // console.log(this.$route.query);
-      // this.$emit("filter");
 
       if (isMobileScreen(window.innerWidth)) {
-        // реализовать мобильную версию
         this.$emit("closeMobileFilter");
       }
+    },
+
+    filtersLoaded() {
+      this.syncFromUrl();
+      this.filtersReady = true;
+      this.$emit('filtersLoaded', true);
+    },
+  },
+
+  watch: {
+    routeSearch() {
+      if (this.filtersReady) this.syncFromUrl();
+    },
+
+    // On desktop a ticked option applies at once; on a phone the button applies the set.
+    searchQuery() {
+      if (this.filtersReady && !isMobileScreen(window.innerWidth)) this.updateUrlData();
     },
   },
 
   created() {
-    if (isLoggedUser()) {
-      this.$store.dispatch("getSidebarFilters").then(() => {
-        this.checkFilterQuery()
-        this.$emit('filtersLoaded', true)
-      });
-    } else {
-      this.$store.dispatch("getSidebarFiltersForGuest").then(() => {
-        this.checkFilterQuery()
-        this.$emit('filtersLoaded', true)
-      });
-    }
+    const action = isLoggedUser() ? "getSidebarFilters" : "getSidebarFiltersForGuest";
+    this.$store.dispatch(action).then(this.filtersLoaded).catch(() => {});
+    this.$store.dispatch("loadAllProjects").catch(() => {});
   }
 };
 </script>
@@ -229,7 +235,7 @@ export default {
   }
 
   &__scroll {
-    max-height: 10em;
+    max-height: 17em;
     overflow: auto;
     padding-right: 0.3em;
 
@@ -327,7 +333,7 @@ export default {
   }
 
   &__options {
-    max-height: 10em;
+    max-height: 17em;
     overflow: auto;
     overflow-x: hidden;
     padding-right: 0.15em;

@@ -67,7 +67,6 @@ export default {
       this.resetOptions();
       this.$router.push('/')
       this.$emit("sidebarClose");
-      this.$store.dispatch("getProjects");
     },
 
     resetOptions() {

@@ -13,6 +13,10 @@
         />
         <span>{{ item.name }}</span>
       </label>
+      <span v-if="counts && !item.checked" class="sidebar__item_count">{{ counts[item.id] || 0 }}</span>
+    </div>
+    <div v-if="!filterList.length" class="sidebar__item sidebar__item--empty">
+      Нет вариантов для этих фильтров
     </div>
   </div>
 </template>
@@ -21,7 +25,7 @@
 export default {
   name: 'SidebarItemCheckbox',
 
-  props: ['filterList'],
+  props: ['filterList', 'counts'],
 
   emits: [
     'updateCheckBoxValue'
@@ -36,7 +40,7 @@ export default {
   &__items_container {
     padding-right: 0.3em;
     // position: relative;
-    max-height: 10em;
+    max-height: 17em;
   }
 
   &__scroll {
@@ -67,18 +71,6 @@ export default {
       background: rgba(174, 174, 174, 0.8);
     }
 
-    &::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      right: 0;
-      // top: calc(100% - 3.75em);
-      bottom: 0;
-      height: em(60);
-      background: #000;
-      z-index: 59;
-      background: linear-gradient(0deg, rgba(255,255,255,1) 21%, rgba(0,212,255,0) 100%);
-    }
   }
 
   &__item {
@@ -148,5 +140,19 @@ export default {
       }
     }
   }
+}
+
+.sidebar__item_count {
+  margin-left: auto;
+  padding-left: .6em;
+  font-size: max(11px, .8em);
+  color: var(--text-color-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidebar__item--empty {
+  padding-left: 0;
+  font-size: max(12px, .8em);
+  color: var(--text-color-4);
 }
 </style>

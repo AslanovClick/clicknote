@@ -55,7 +55,7 @@ export default {
   }
 
   &__options {
-    max-height: 10em;
+    max-height: 17em;
     overflow: auto;
     overflow-x: hidden;
     padding-right: 0.15em;

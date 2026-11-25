@@ -1,9 +1,9 @@
 <template>
-  <div class="home-buttons">
+  <div class="home-buttons" ref="row">
     <div class="home-button"
         v-for="(button, index) in buttons"
         :key="button+index"
-        :class="{'active': button.active === true}"
+        :class="{'active': button.active === true, 'empty': counts && !counts[button.filterId] && !button.active}"
         @click="$emit('selected', { filterId: button.filterId, index })"
         >
         <div class="home-button__icon">
@@ -14,6 +14,7 @@
         <div class="home-button__title">
             {{ button.title }}
         </div>
+        <span v-if="counts" class="home-button__count">{{ counts[button.filterId] || 0 }}</span>
     </div>
 </div>
 </template>
@@ -21,12 +22,50 @@
 <script>
 export default {
   props: [
-    'buttons'
+    'buttons',
+    // { filterId: works } with the sidebar filters applied, or null while loading
+    'counts',
   ],
 
   emits: [
     'selected'
   ],
+
+  computed: {
+    activeId() {
+      return this.buttons.find((button) => button.active)?.filterId;
+    },
+  },
+
+  methods: {
+    // On narrow screens the row scrolls sideways; keep the active tab in sight.
+    revealActive(smooth) {
+      const row = this.$refs.row;
+      const active = row && row.querySelector(".home-button.active");
+      if (!active || row.scrollWidth <= row.clientWidth) return;
+      const left = active.getBoundingClientRect().left - row.getBoundingClientRect().left + row.scrollLeft;
+      if (left < row.scrollLeft || left + active.offsetWidth > row.scrollLeft + row.clientWidth) {
+        row.scrollTo({ left: left - 16, behavior: smooth === true ? "smooth" : "auto" });
+      }
+    },
+  },
+
+  watch: {
+    activeId() {
+      this.$nextTick(() => this.revealActive(true));
+    },
+    // The tab list is rebuilt once the directions arrive, and widens when counts appear.
+    buttons() {
+      this.$nextTick(this.revealActive);
+    },
+    counts() {
+      this.$nextTick(this.revealActive);
+    },
+  },
+
+  mounted() {
+    this.revealActive();
+  },
 }
 </script>
 
@@ -120,6 +159,28 @@ export default {
       color: #AEAEAE;
       margin-left: em(12);
       transition: color .15s ease-in-out;
+  }
+
+  &__count {
+      margin-left: em(8);
+      padding: em(2) em(7);
+      border-radius: em(10);
+      background: var(--bgcolor-3);
+      color: var(--text-color-4);
+      font-size: max(11px, em(11));
+      font-weight: 500;
+      line-height: 1.3;
+      font-variant-numeric: tabular-nums;
+  }
+
+  &.active &__count {
+      background: rgba(255, 56, 29, .12);
+      color: #FF381D;
+  }
+
+  // A tab that would show nothing with the current sidebar filters.
+  &.empty {
+      opacity: .45;
   }
 
   &__icon {

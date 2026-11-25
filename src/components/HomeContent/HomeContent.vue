@@ -1,5 +1,6 @@
 <template>
-  <home-buttons :buttons="buttons" @selected="selected" />
+  <home-buttons :buttons="buttons" :counts="tabCounts" @selected="selected" />
+  <active-filters :total="total" :directionNames="directionNames" />
   <projects-list
     :searchInputValue="searchInputValue"
     @modalEditOpen="(project) => $emit('modalEditOpen', project)"
@@ -12,6 +13,9 @@ import ProjectsList from "@/components/ProjectsList/ProjectsList.vue";
 import HomeButtons from "@/components/HomeButtons/HomeButtons.vue";
 
 import { getUrlData } from "@/Hooks/getUrlData";
+import { parseFilterQuery, buildFilterQuery, filterProjects, facetCounts } from "@/Hooks/projectFilters";
+import { isLoggedUser } from "@/Hooks/isLoggedUser";
+import ActiveFilters from "./ActiveFilters.vue";
 
 // Icon for a direction that was added in the admin panel after these tabs were drawn.
 const GENERIC_ICON = {
@@ -30,6 +34,7 @@ export default {
   components: {
     ProjectsList,
     HomeButtons,
+    ActiveFilters,
   },
 
   props: ["searchInputValue"],
@@ -134,6 +139,39 @@ export default {
   },
 
   computed: {
+    urlFilters() {
+      const query = this.$route.fullPath.split("?")[1];
+      return parseFilterQuery(query ? `?${query}` : "");
+    },
+
+    visibleProjects() {
+      const all = this.$store.state.allProjects;
+      if (!Array.isArray(all)) return null;
+      return isLoggedUser() ? all : all.filter((project) => project.public);
+    },
+
+    // Works each tab would show with the sidebar filters kept; -1 is "latest works".
+    tabCounts() {
+      if (!this.visibleProjects) return null;
+      const withoutDirection = { ...this.urlFilters };
+      delete withoutDirection.direction;
+      return {
+        ...facetCounts(this.visibleProjects, this.urlFilters, "direction"),
+        [-1]: filterProjects(this.visibleProjects, withoutDirection).length,
+      };
+    },
+
+    total() {
+      if (!this.visibleProjects) return null;
+      const query = (this.searchInputValue || "").toLowerCase();
+      return filterProjects(this.visibleProjects, this.urlFilters)
+        .filter((project) => !query || project.name.toLowerCase().includes(query)).length;
+    },
+
+    directionNames() {
+      return Object.fromEntries(this.buttons.map((button) => [button.filterId, button.title]));
+    },
+
     filterId() {
       return this.buttons.find((button) => button.active === true).filterId;
     },
@@ -179,38 +217,34 @@ export default {
       );
     },
 
+    // A tab only swaps the direction; the sidebar filters stay as they are.
     selected({filterId, index}) {
       this.setCurrentButton(index);
 
-      let filterQuery = filterId === -1 ? '' : `?direction[0]=${filterId}`;
-      this.$emit('filterUpdate')
+      const filters = parseFilterQuery(getUrlData() || "");
+      if (filterId === -1) delete filters.direction;
+      else filters.direction = [filterId];
 
-      this.$router.push(`/${filterQuery}`);
+      this.$router.push(`/${buildFilterQuery(filters)}`);
     },
 
     resetButtons() {
       this.buttons.forEach((tab, index) => (tab.active = index === 0));
     },
 
+    // Highlights the tab of the one direction in the URL; no direction means "latest works".
     updateCurrentDirection() {
-      const filterIdFromLS = +localStorage.getItem("currentDirection");
-      const urlData = getUrlData();
+      const ids = parseFilterQuery(getUrlData() || "").direction || [];
+      this.buttons.forEach((button) => {
+        button.active = ids.length === 0 ? button.filterId === -1
+          : ids.length === 1 && button.filterId === ids[0];
+      });
+    },
+  },
 
-      // A URL filtered only by one direction (what the tabs produce) keeps its tab highlighted.
-      const params = urlData ? new URLSearchParams(urlData) : null;
-      const onlyDirection =
-        params && [...params.keys()].length === 1 && params.get("direction[0]");
-
-      if (onlyDirection) {
-        this.buttons.forEach((button) => (button.active = button.filterId === +onlyDirection));
-        if (!this.buttons.some((button) => button.active)) this.resetButtons();
-      } else if (urlData) {
-        this.resetButtons();
-      } else if (filterIdFromLS) {
-        this.buttons.find(
-          (button) => (button.active = button.filterId === filterIdFromLS)
-        );
-      }
+  watch: {
+    "$route.fullPath"() {
+      this.updateCurrentDirection();
     },
   },
 

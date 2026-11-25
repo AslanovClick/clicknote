@@ -1,11 +1,28 @@
 <template>
-  <div class="sidebar__button">
-    <span> Фильтровать </span>
+  <div class="sidebar__button" :class="{ disabled: count === 0 }">
+    <span>{{ label }}</span>
   </div>
 </template>
 
 <script>
-export default {};
+// On desktop the filters apply as soon as an option is ticked, so the button is
+// only shown on phones, where it applies the set and closes the panel.
+export default {
+  props: {
+    count: { type: Number, default: null },
+  },
+
+  computed: {
+    label() {
+      if (this.count === null) return "Фильтровать";
+      if (this.count === 0) return "Нет работ";
+      const n = this.count, mod10 = n % 10, mod100 = n % 100;
+      const word = mod10 === 1 && mod100 !== 11 ? "работу"
+        : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? "работы" : "работ";
+      return `Показать ${n} ${word}`;
+    },
+  },
+};
 </script>
 
 <style scoped lang="scss">
@@ -39,6 +56,16 @@ export default {};
       max-width: unset;
       width: 90%;
     }
+  }
+}
+
+.sidebar__button {
+  @media (min-width: 501px) {
+    display: none;
+  }
+
+  &.disabled {
+    opacity: .5;
   }
 }
 </style>

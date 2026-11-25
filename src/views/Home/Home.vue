@@ -113,7 +113,7 @@ export default {
     },
 
     edit() {
-      updateProjects()
+      updateProjects({ force: true })
     },
 
     checkPagePagination() {

@@ -105,7 +105,7 @@ export default {
 
       this.closeModal();
 
-      updateProjects();
+      updateProjects({ force: true });
       this.$emit("edit");
       this.$store.dispatch("getArchive");
     },
