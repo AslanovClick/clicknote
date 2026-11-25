@@ -76,7 +76,7 @@ export default {
         font-style: normal;
         font-weight: 500;
         // font-size: em(16);
-        font-size: .9em;
+        font-size: max(13px, .9em);
         line-height: em(20, 16);
         color: #AEAEAE;
         margin-left: em(12);
@@ -155,11 +155,11 @@ export default {
             width: 100%;
             padding: em(10) em(16);
 
-            font-size: 0.75em;
+            font-size: max(12px, 0.75em);
         }
 
         &__title {
-            font-size: em(12);
+            font-size: max(12px, em(12));
             width: max-content;
         }
     }

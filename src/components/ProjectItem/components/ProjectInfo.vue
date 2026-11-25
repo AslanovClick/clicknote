@@ -111,7 +111,7 @@ export default {
   &__title {
     color: #aeaeae;
     font-weight: 600;
-    font-size: em(14);
+    font-size: max(13px, em(14));
     line-height: em(17, 14);
     color: var(--text-color-2);
     max-width: 20em;
@@ -124,13 +124,13 @@ export default {
     color: #7e7e7e;
     & span {
       font-weight: 400;
-      font-size: em(12);
+      font-size: max(12px, em(12));
       line-height: em(15, 12);
       color: #aeaeae;
     }
     & b {
       font-weight: 600;
-      font-size: em(12);
+      font-size: max(12px, em(12));
       line-height: em(17, 12);
       cursor: pointer;
     }
@@ -144,7 +144,7 @@ export default {
 
     &__title {
       font-weight: 600;
-      font-size: em(10);
+      font-size: max(11px, em(10));
       line-height: em(12, 10);
       color: var(--text-color-2);
     }
@@ -157,7 +157,7 @@ export default {
       font-weight: 500;
       line-height: em(11, 9);
       color: #7e7e7e;
-      font-size: 0.7em;
+      font-size: max(11px, 0.7em);
     }
   }
 }

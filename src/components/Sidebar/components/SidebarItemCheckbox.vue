@@ -83,7 +83,7 @@ export default {
 
   &__item {
     font-weight: 400;
-    font-size: em(14);
+    font-size: max(13px, em(14));
     line-height: 130%;
     color: var(--bgcolor-5);
     display: flex;

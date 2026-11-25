@@ -797,7 +797,7 @@ export default {
     font-family: "Montserrat";
     font-style: normal;
     font-weight: 400;
-    font-size: em(14);
+    font-size: max(13px, em(14));
     line-height: 120%;
     text-align: right;
     color: var(--text-color-2);
@@ -808,7 +808,7 @@ export default {
     font-family: "Montserrat";
     font-style: normal;
     font-weight: 600;
-    font-size: em(12);
+    font-size: max(12px, em(12));
     line-height: 120%;
     text-align: right;
     color: #ff1923;

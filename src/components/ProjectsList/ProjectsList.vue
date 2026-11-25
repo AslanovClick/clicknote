@@ -183,6 +183,15 @@ export default {
       grid-template-columns: repeat(4, 1fr);
       grid-gap: em(20);
       grid-row-gap: em(32);
+
+      // Four columns only where they fit; cards and captions stay readable on laptops and tablets.
+      @media (max-width: 1279px) {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      @media (max-width: 900px) {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
   }
 
@@ -201,7 +210,7 @@ export default {
       background: var(--bgcolor-2);
       color: var(--text-color-1);
       font: inherit;
-      font-size: em(14);
+      font-size: max(13px, em(14));
       cursor: pointer;
       transition: background 0.2s ease-in-out;
 

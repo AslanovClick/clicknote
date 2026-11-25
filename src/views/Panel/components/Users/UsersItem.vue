@@ -200,7 +200,7 @@ export default {
             font-style: normal;
             color: var(--text-color-2);
             font-weight: 600;
-            font-size: em(14);
+            font-size: max(13px, em(14));
             line-height: 120%;
             transition: color .2s ease-in-out;
         }
@@ -214,7 +214,7 @@ export default {
         & span {
             font-style: normal;
             font-weight: 500;
-            font-size: em(12);
+            font-size: max(12px, em(12));
             line-height: em(15, 12);
             color: var(--bgcolor-5);
             transition: color .2s ease-in-out;
@@ -229,7 +229,7 @@ export default {
         & span {
             font-style: normal;
             font-weight: 500;
-            font-size: em(12);
+            font-size: max(12px, em(12));
             line-height: em(15);
             color: #8D8D8D;
         }
@@ -263,7 +263,7 @@ export default {
         & span {
             opacity: 0;
             font-weight: 500;
-            font-size: em(8);
+            font-size: max(10px, em(8));
             line-height: em(10, 8);
             color: #05CD99;
             position: absolute;
@@ -354,7 +354,7 @@ export default {
         -moz-appearance: none;
         color: var(--text-color-2);
         font-weight: 400;
-        font-size: 0.875em;
+        font-size: max(12px, 0.875em);
         line-height: 120%;
         padding: .5em 1.5em .5em 0;
 

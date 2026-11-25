@@ -1,6 +1,6 @@
 <template>
-  <button class="auth_with_google" @click="login">
-    <img src="img/login/google.svg" alt="" />
+  <button class="auth_with_google" @click="login" aria-label="Войти с помощью Google" title="Войти с помощью Google">
+    <img src="/img/login/google.svg" alt="" />
     <span> Войти с помощью Google </span>
   </button>
 </template>
@@ -74,9 +74,16 @@ export default {
     background: var(--bgcolor-9);
   }
 
+  // The compact (tablet/phone) header has no room for the label: icon only.
   @media (max-width: 768px) {
+    padding: em(10);
+
+    & img {
+      margin-right: 0;
+    }
+
     & span {
-      font-size: 0.7em;
+      display: none;
     }
   }
 
@@ -94,7 +101,7 @@ export default {
     }
 
     & span {
-      font-size: 0.9em;
+      font-size: max(13px, 0.9em);
       display: none;
     }
   }

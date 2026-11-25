@@ -346,7 +346,7 @@ export default {
         transition: color .2s ease-in-out, border .2s ease-in-out;
 
         & span {
-            font-size: em(14);
+            font-size: max(13px, em(14));
             line-height: em(17, 14);
         }
     }
@@ -463,7 +463,7 @@ export default {
         margin-left: .3em;
 
         & span {
-            font-size: em(14);
+            font-size: max(13px, em(14));
             line-height: 104%;
         }
     }

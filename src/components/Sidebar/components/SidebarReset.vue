@@ -42,7 +42,7 @@ export default {};
     align-items: center;
     justify-content: center;
     font-weight: 500;
-    font-size: em(14);
+    font-size: max(13px, em(14));
     line-height: 130%;
     color: var(--bgcolor-5);
     cursor: pointer;

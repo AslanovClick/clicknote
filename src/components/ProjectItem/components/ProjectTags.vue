@@ -175,7 +175,7 @@ export default {
   &__tag {
     font-style: normal;
     font-weight: 400;
-    font-size: em(10);
+    font-size: max(11px, em(10));
     line-height: em(12, 10);
     color: #AEAEAE;
     padding: em(8, 10) em(12, 10);
@@ -195,7 +195,7 @@ export default {
 
   @media (max-width: 500px) {
     &__tags {
-        font-size: 0.75em;
+        font-size: max(12px, 0.75em);
         z-index: 888;
         height: max-content;
         transition: max-height .75s ease-in-out;

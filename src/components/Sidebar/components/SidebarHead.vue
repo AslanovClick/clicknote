@@ -40,7 +40,7 @@ export default {
 
     &__title {
         font-weight: 500;
-        font-size: .9em;
+        font-size: max(13px, .9em);
         line-height: 100%;
         color: var(--text-color-2);
         margin-right: em(8);
@@ -65,7 +65,7 @@ export default {
     }
 
     &__count {
-      font-size: 0.9em;
+      font-size: max(13px, 0.9em);
       font-weight: 700;
       line-height: 100%;
       color: rgba(174, 174, 174, .9);

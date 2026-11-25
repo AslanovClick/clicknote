@@ -41,6 +41,13 @@ export default {
   border-radius: em(25);
   margin-bottom: em(36);
   min-height: 3.3em;
+  // Tabs keep one line; if they don't fit (narrow screens, more directions) the row scrolls.
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   @media (max-width: 500px) {
     overflow: auto;
@@ -68,7 +75,8 @@ export default {
     transition: background .2s ease-in-out, border .2s ease-in-out;
     user-select: none;
     background: var(--bgcolor-2);
-    width: 16%;
+    flex: 1 0 auto;
+    white-space: nowrap;
 
     &:last-child {
       margin-right: 0;
@@ -107,7 +115,7 @@ export default {
       font-style: normal;
       font-weight: 500;
       // font-size: em(16);
-      font-size: .9em;
+      font-size: max(13px, .9em);
       line-height: em(20, 16);
       color: #AEAEAE;
       margin-left: em(12);
@@ -124,12 +132,12 @@ export default {
   }
 
   @media (max-width: 500px) {
-    width: 100%;
+    flex: 0 0 auto;
     padding: em(10) em(16);
-    font-size: 0.75em;
+    font-size: max(12px, 0.75em);
 
     &__title {
-        font-size: em(12);
+        font-size: max(12px, em(12));
         width: max-content;
     }
   }

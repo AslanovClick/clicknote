@@ -301,7 +301,7 @@ export default {
         & span {
             font-style: normal;
             font-weight: 500;
-            font-size: em(12);
+            font-size: max(12px, em(12));
             line-height: em(15, 12);
             color: var(--text-color-4);
             user-select: none;
@@ -374,7 +374,7 @@ export default {
             border: 0;
             font-style: normal;
             font-weight: 500;
-            font-size: em(12);
+            font-size: max(12px, em(12));
             line-height: em(15, 12);
             color: var(--text-color-2);
 
@@ -395,7 +395,7 @@ export default {
         white-space: pre;
         font-style: normal;
         font-weight: 500;
-        font-size: em(12);
+        font-size: max(12px, em(12));
         line-height: em(15, 12);
         width: 62%;
     }
