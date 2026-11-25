@@ -107,6 +107,10 @@ export default {
     },
 
     removeProject(itemID) {
+      const project = this.$store.state.archiveProjects?.find?.(p => p.id === itemID);
+      const name = project ? `«${project.name}»` : 'эту работу';
+      if (!window.confirm(`Удалить ${name} навсегда? Восстановить её будет нельзя.`)) return;
+
       this.$store.dispatch('deleteProject', {id: itemID}).then(() => {
         this.$store.dispatch('getProjects');
         this.$store.dispatch('getArchive');

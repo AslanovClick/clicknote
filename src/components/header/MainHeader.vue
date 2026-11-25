@@ -106,8 +106,15 @@
               v-for="project in searchResults"
               :key="project.id"
               @click="routeTo(project.id)"
-              v-html="formatName(project.name)"
-            ></div>
+            >
+              <template
+                v-for="(part, index) in formatName(project.name)"
+                :key="index"
+              >
+                <b v-if="part.match" style="color: var(--text-color-1)">{{ part.text }}</b>
+                <template v-else>{{ part.text }}</template>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -345,31 +352,30 @@ export default {
         this.$emit("search", this.inputValue);
       }
     },
+    // Splits the name into plain and highlighted parts. Rendered as text, never as HTML,
+    // so a project name can't inject markup.
     formatName(name) {
-      const indexStart = name
-        .toLowerCase()
-        .indexOf(this.inputValue.toLowerCase());
-      const indexEnd = indexStart + this.inputValue.length - 1;
-      const res = name
-        .split("")
-        .map((s, index) => {
-          if (index >= indexStart && index <= indexEnd) {
-            s = `<b style="color: var(--text-color-1)">${s}</b>`;
-          }
-          return s;
-        })
-        .join("");
-      return res;
+      const start = name.toLowerCase().indexOf(this.inputValue.toLowerCase());
+      if (start === -1 || !this.inputValue) {
+        return [{ text: name, match: false }];
+      }
+      const end = start + this.inputValue.length;
+      return [
+        { text: name.slice(0, start), match: false },
+        { text: name.slice(start, end), match: true },
+        { text: name.slice(end), match: false },
+      ].filter((part) => part.text);
     },
     enterPress() {
       if (!this.inputValue) {
         return;
       }
       const routePath = this.$router.currentRoute["_value"].fullPath;
+      const query = encodeURIComponent(this.inputValue);
       if (routePath === "/panel") {
-        this.$router.push(`/panel?s=${this.inputValue}`);
+        this.$router.push(`/panel?s=${query}`);
       } else {
-        this.$router.push(`/?s=${this.inputValue}`);
+        this.$router.push(`/?s=${query}`);
       }
       this.$emit("search", this.inputValue);
       this.searchEnter = true;
@@ -385,7 +391,7 @@ export default {
       // let searchParams = new URLSearchParams(url.search);
       let searchValue =
         window.location.href.split("?s=")[1] &&
-        decodeURI(window.location.href.split("?s=")[1]);
+        decodeURIComponent(window.location.href.split("?s=")[1]);
       if (!searchValue) {
         return;
       }

@@ -1,6 +1,7 @@
 <template>
   <div class="body-wrap" :class="{ darkmode: darkmode }">
     <router-view @darkmode="darkModeHandler"></router-view>
+    <api-error-toast />
     <div
       class="darkmode__anim"
       :class="{
@@ -13,8 +14,12 @@
 </template>
 
 <script>
+import ApiErrorToast from "@/components/UI/ApiErrorToast.vue";
+
 export default {
   name: "App",
+
+  components: { ApiErrorToast },
 
   computed: {
     isNotGuestPage() {
@@ -60,7 +65,9 @@ export default {
       AUTH_TOKEN === null &&
       ROLE === null &&
       !link.includes("?s") &&
-      link.includes("?")
+      link.includes("?") &&
+      // Shared project links often carry ?utm_… / ?fbclid=…; keep the guest on the project.
+      !window.location.pathname.startsWith("/project")
     ) {
       // console.log(2);
       const queryString = window.location.search;

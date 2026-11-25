@@ -89,7 +89,7 @@
               @click="modalEditOpen(project)"
               v-if="
                 isAdminRole ||
-                (isExecutorRole && user.id === project.executor?.id)
+                (isExecutorRole && user?.id === project.executor?.id)
               "
             >
               <svg
@@ -122,9 +122,10 @@
 
           <preloader class="project__preloader" />
         </div>
-        <div class="project__arrows">
+        <div class="project__arrows" v-if="projectsSiblingsId">
           <div
             class="project__arrow project__arrow_left"
+            v-show="projectsSiblingsId.prev"
             @click="$router.push(projectsSiblingsId.prev)"
           >
             <svg
@@ -145,7 +146,8 @@
 
           <div
             class="project__arrow project__arrow_right"
-            @click="$router.push({ path: projectsSiblingsId.next })"
+            v-show="projectsSiblingsId.next"
+            @click="$router.push(projectsSiblingsId.next)"
           >
             <svg
               width="7"
@@ -244,21 +246,21 @@ export default {
       projects: (state) => state.projects,
     }),
 
+    // Links to the neighbouring projects in the loaded list; null when this project
+    // isn't in the list (e.g. opened by direct link), prev/next null at the ends.
     projectsSiblingsId() {
-      const projects = Array.from(this.projects);
-      const obj = {};
-      obj.current = projects.findIndex((p) => p.id === this.project.id);
-      obj.prev = obj.current >= 1 ? obj.current - 1 : 0;
-      obj.next =
-        obj.current < projects.length ? obj.current + 1 : projects.length - 1;
+      const projects = Array.from(this.projects || []);
+      const current = projects.findIndex((p) => p.id === this.project.id);
+      if (current === -1) return null;
 
-      const result = {
-        current: setProjectUrl(projects[obj.current].id.toString()),
-        prev: setProjectUrl(projects[obj.prev].id.toString()),
-        next: setProjectUrl(projects[obj.next].id.toString()),
+      const urlAt = (index) =>
+        projects[index] ? setProjectUrl(projects[index].id.toString()) : null;
+
+      return {
+        current: urlAt(current),
+        prev: urlAt(current - 1),
+        next: urlAt(current + 1),
       };
-
-      return result;
     },
 
     user() {
@@ -338,12 +340,7 @@ export default {
     },
 
     iframeLoad() {
-      if (this.iframe.loaded) return this.iframeLoaded();
-      else return; // do nothing
-    },
-
-    iframeLoaded() {
-      console.log("loaded");
+      this.iframe.loaded = true;
     },
 
     checkUrl() {
@@ -351,7 +348,8 @@ export default {
 
       if (urlParams.split("")[0] !== "p") {
         const url = setProjectUrl(urlParams);
-        this.$router.push(url);
+        // replace, not push: otherwise Back returns to the raw URL, which redirects forward again.
+        this.$router.replace(url);
       }
     },
 
@@ -359,17 +357,22 @@ export default {
       this.$store
         .dispatch("getProjectById", { id: this.projectId })
         .then((data) => {
-          if (data.project === null) {
-            this.$router.push("/404");
+          if (!data || data.project === null) {
+            this.$router.replace("/404");
           }
-        });
+        })
+        .catch(() => this.$router.replace("/404"));
     },
   },
 
-  updated() {
-    this.iframe.loaded = true;
-    // this.iframe.loaded = false;
-    this.getProject();
+  watch: {
+    // The page is reused when the arrows change the route, so reload on id change.
+    // (It used to refetch in updated(), which re-rendered and refetched endlessly.)
+    projectId(newId, oldId) {
+      if (newId === oldId) return;
+      this.iframe.loaded = false;
+      this.getProject();
+    },
   },
 
   created() {
@@ -381,7 +384,8 @@ export default {
   },
 
   mounted() {
-    this.prevPage = JSON.parse(localStorage.getItem("pagesList")).prev;
+    const pagesList = JSON.parse(localStorage.getItem("pagesList"));
+    this.prevPage = pagesList?.prev || "/";
   },
 
   unmounted() {

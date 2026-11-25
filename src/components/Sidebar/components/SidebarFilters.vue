@@ -87,24 +87,14 @@ export default {
       return Object.fromEntries(result);
     },
 
+    // "?scope[0]=34&type[0]=5" -> { scope: ["34"], type: ["5"] }
     parseQuery(query) {
-      if (!query) return {};
-      const queryArray = JSON.parse(
-        query
-          .replace("?", '{"')
-          .replaceAll("&", '", "')
-          .replaceAll(/$/g, '"}')
-          .replaceAll("=", '":"')
-      );
       const currentFilters = {};
-
-      for (let key in queryArray) {
-        const currentKey = key.replaceAll(/\[([\s\S]+?)\]/g, "");
+      new URLSearchParams(query || "").forEach((value, key) => {
+        const currentKey = key.replace(/\[[^\]]*\]/g, "");
         if (!currentFilters[currentKey]) currentFilters[currentKey] = [];
-
-        currentFilters[currentKey].push(queryArray[key]);
-      }
-
+        currentFilters[currentKey].push(value);
+      });
       return currentFilters;
     },
 
@@ -144,7 +134,8 @@ export default {
     },
 
     updateUrlData() {
-      this.$router.push(`${window.location.origin}/${this.searchQuery}`);
+      // A path, not a full URL: vue-router treats "http://..." as a path and lands on 404.
+      this.$router.push(`/${this.searchQuery}`);
 
       // window.location = window.location.origin + "/" + this.searchQuery;
     },

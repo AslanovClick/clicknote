@@ -7,7 +7,7 @@
         :class="{
             'draggable': draggableElem === item.id,
         }"
-        v-if="isAdminRole || isExecutorRole && user.id === item.executor.id"
+        v-if="isAdminRole || isExecutorRole && user?.id === item.executor?.id"
         >
         <div class="item__img">
             <img :src="item.preview" alt="">
@@ -21,21 +21,21 @@
         </div>
         <div class="item__author">
             <span>
-                {{ item.executor.firstName }}
-                {{ item.executor.lastName }}
+                {{ item.executor?.firstName }}
+                {{ item.executor?.lastName }}
             </span>
         </div>
         <div class="item__type">
             <span 
-                @click="$router.push(`/project/${item.direction.id}`)"
+                @click="item.direction && $router.push(`/?direction[0]=${item.direction.id}`)"
                 >
-                {{item.direction.name}}
+                {{ item.direction?.name }}
             </span>
         </div>
         <div class="item__tags">
             <div class="item__tag">
                 <span>
-                    {{item.client.name}}
+                    {{ item.client?.name }}
                 </span>
             </div>
         </div>

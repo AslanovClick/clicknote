@@ -234,14 +234,14 @@ export default createStore({
 
   actions: {
     // createRequest({ commit }, { method, body, headers}) {
-    //     return new Promise((resolve) => {
+    //     return new Promise((resolve, reject) => {
     //         fetch(`${API_URL}/login`, {
     //             method: 'POST',
     //             body: JSON.stringify({ token: googleAuthToken }),
     //             headers
     //         })
     //         .then((response) => response.json()).then((data) => {
-    //             if (data.token !== 'undefined') {
+    //             if (data.token) {
     //                 commit('setToken', data.token);
     //                 localStorage.setItem('X-AUTH-TOKEN', data.token)
     //                 resolve()
@@ -251,7 +251,7 @@ export default createStore({
     // },
 
     login({ commit }, { googleAuthToken }) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/login`, {
                 method: 'POST',
                 body: JSON.stringify({ token: googleAuthToken })
@@ -263,11 +263,12 @@ export default createStore({
                 }
                 resolve(data)
             })
+            .catch(reject)
         })
     },
 
     addUserRole({ state }, { roleName }) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/user/add-role`, {
                 method: 'POST', 
                 body: JSON.stringify({ role: roleName }),
@@ -279,11 +280,12 @@ export default createStore({
                 // console.log(data);
                 resolve()
             })
+            .catch(reject)
         })
     },
 
     updateUserRole({ state, dispatch }, { id, role }) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/user/${id}/set-role`, {
                 method: 'POST', 
                 body: JSON.stringify({ role }),
@@ -296,9 +298,10 @@ export default createStore({
                     dispatch('getUsers');
                     resolve()
                 } else {
-                    console.log(data.errors);
+                    reject(data.errors);
                 }
             })
+            .catch(reject)
         })
     },
     
@@ -310,28 +313,22 @@ export default createStore({
                     'X-AUTH-TOKEN': state.token
                 }
             })
-            .then((response) => response.json()).then((data) => {
-
-                if (data.ok === true) {
-                    commit('removeToken');
-                    localStorage.removeItem('X-AUTH-TOKEN')
-                    localStorage.removeItem('ROLE')
-                    localStorage.removeItem('pagesList')
-                    localStorage.removeItem('user')
-                    
-                    resolve()
-                    
-                    return
-                }
-
-                console.log('logout error');
+            .catch(() => {})
+            .finally(() => {
+                // Clear the local session even if the server call fails (e.g. expired token),
+                // otherwise the user can never log out.
+                commit('removeToken');
+                localStorage.removeItem('X-AUTH-TOKEN')
+                localStorage.removeItem('ROLE')
+                localStorage.removeItem('pagesList')
+                localStorage.removeItem('user')
                 resolve()
             })
           })
     },
 
     createFilter({ state }, {filterType, filterName}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/filter/${filterType}/`, {
                 method: 'POST', 
                 headers: {
@@ -343,11 +340,12 @@ export default createStore({
             .then((response) => response.json()).then((data) => {
                 resolve(data)
             })
+            .catch(reject)
         })
     },
 
     getFilter({ state, commit }, {filterType}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/filter/${filterType}/`, {
                 method: 'GET', 
                 headers: {
@@ -359,20 +357,24 @@ export default createStore({
                 if (!data.errors) {
                     commit('setFilter', {type: filterType, value: data})
                     resolve(data)
-                } else if (data.errors.find(error => error.code == 400)) {
-                    // commit('removeToken');
-                    // localStorage.removeItem('X-AUTH-TOKEN')
-                    // localStorage.removeItem('ROLE')
+                } else {
+                    reject(data.errors)
+                    if (data.errors.find(error => error.code == 400)) {
+                        // commit('removeToken');
+                        // localStorage.removeItem('X-AUTH-TOKEN')
+                        // localStorage.removeItem('ROLE')
+                    }
                 }
             })
+            .catch(reject)
         })
     },
 
     getFilters({state, getters, dispatch}) {
         return new Promise((resolve) => {
             state.filtersData.forEach((f, index) => {
-                dispatch('getFilter', {filterType: f.name})
-                
+                dispatch('getFilter', {filterType: f.name}).catch(() => {})
+
                 if (index === state.filtersData.length - 1) {
                     resolve(getters.getFilters)
                 }
@@ -381,9 +383,9 @@ export default createStore({
     },
 
     getSidebarFilters({state, commit}) {
-        return new Promise((sidebarFiltersResolve) => {
+        return new Promise((sidebarFiltersResolve, sidebarFiltersReject) => {
             const promises = [...state.filtersData].map((f) => {
-                return new Promise((resolve) => {
+                return new Promise((resolve, reject) => {
                     fetch(`${API_URL}/filter/${f.name}/`, {
                         method: 'GET', 
                         headers: {
@@ -394,6 +396,7 @@ export default createStore({
                     .then((response) => response.json()).then((data) => {
                         resolve({type: f.name, value: Object.values(data).flat()});
                     })
+                    .catch(reject)
                 })
             });
     
@@ -404,20 +407,21 @@ export default createStore({
                         'X-AUTH-TOKEN': state.token
                     }
                 })
-                .then((response) => response.json()).then((data) => resolve({type: 'executor', value: Object.values(data).flat()}));
+                .then((response) => response.json()).then((data) => resolve({type: 'executor', value: Object.values(data).flat()}))
+                .catch(reject);
             }));
             
             Promise.all(promises).then(values => {
                 commit('setSidebarFilters', values);
                 sidebarFiltersResolve();
-            });
+            }).catch(sidebarFiltersReject);
         })
     },
 
     getSidebarFiltersForGuest({state, commit}) {
-        return new Promise((sidebarFiltersResolve) => {
+        return new Promise((sidebarFiltersResolve, sidebarFiltersReject) => {
             const promises = [...state.filtersDataForGuest].map((f) => {
-                return new Promise((resolve) => {
+                return new Promise((resolve, reject) => {
                     fetch(`${API_URL}/filter/${f.name}/`, {
                         method: 'GET', 
                         headers: {
@@ -428,6 +432,7 @@ export default createStore({
                     .then((response) => response.json()).then((data) => {
                         resolve({type: f.name, value: Object.values(data).flat()});
                     })
+                    .catch(reject)
                 })
             });
 
@@ -435,12 +440,12 @@ export default createStore({
             Promise.all(promises).then(values => {
                 commit('setSidebarFilters', values);
                 sidebarFiltersResolve();
-            });
+            }).catch(sidebarFiltersReject);
         })
     },
 
     // getSidebarFiltersForGuest({state, getters, commit}) {
-    //     return new Promise((resolve) => {
+    //     return new Promise((resolve, reject) => {
     //         state.filtersDataForGuest.forEach((f, index) => {
     //             fetch(`${API_URL}/filter/${f.name}/`, {
     //                 method: 'GET', 
@@ -482,7 +487,7 @@ export default createStore({
     },
 
     updateFilter({ state }, {filterType, id, name}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/filter/${filterType}/${id}`, {
                 method: 'PUT', 
                 headers: {
@@ -494,11 +499,12 @@ export default createStore({
             .then((response) => response.json()).then((data) => {
                 resolve(data)
             })
+            .catch(reject)
         })
     },
 
     removeFilter({ state }, {filterType, id}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/filter/${filterType}/${id}`, {
                 method: 'DELETE', 
                 headers: {
@@ -508,6 +514,7 @@ export default createStore({
             .then((response) => response.json()).then((data) => {
                 resolve(data)
             })
+            .catch(reject)
         })
     },
 
@@ -519,7 +526,7 @@ export default createStore({
     },
     
     getUser({ state, commit }) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/user`, {
                 method: 'GET', 
                 headers: {
@@ -532,17 +539,21 @@ export default createStore({
                     localStorage.setItem('ROLE', data.user.role);
 
                     resolve(data)
-                } else if (data.errors.find(error => error.code == 400)) {
-                    commit('removeToken');
-                    localStorage.removeItem('X-AUTH-TOKEN')
-                    localStorage.removeItem('ROLE')
+                } else {
+                    reject(data.errors)
+                    if (data.errors.find(error => error.code == 400)) {
+                        commit('removeToken');
+                        localStorage.removeItem('X-AUTH-TOKEN')
+                        localStorage.removeItem('ROLE')
+                    }
                 }
             })
+            .catch(reject)
         })
     },
 
     removeUser({ state }, {id}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/user/${id}`, {
                 method: 'DELETE', 
                 headers: {
@@ -553,13 +564,16 @@ export default createStore({
                 // console.log(data);
                 if (data.ok) {
                     resolve(data)
+                } else {
+                    reject(data)
                 }
             })
+            .catch(reject)
         })
     },
 
     getUsersList({ state, commit }) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/user/list`, {
                 method: 'GET', 
                 headers: {
@@ -570,12 +584,16 @@ export default createStore({
                 if (!data.errors) {
                     commit('setUsersList', data.users);
                     resolve(data)
-                } else if (data.errors.find(error => error.code == 400)) {
-                    // commit('removeToken');
-                    // localStorage.removeItem('X-AUTH-TOKEN')
-                    // localStorage.removeItem('ROLE')
+                } else {
+                    reject(data.errors)
+                    if (data.errors.find(error => error.code == 400)) {
+                        // commit('removeToken');
+                        // localStorage.removeItem('X-AUTH-TOKEN')
+                        // localStorage.removeItem('ROLE')
+                    }
                 }
             })
+            .catch(reject)
         })
     },
 
@@ -589,7 +607,7 @@ export default createStore({
     },
 
     createProject({ state, commit }, {formData}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const req = new XMLHttpRequest();
 
             req.open('POST', `${API_URL}/project/`);
@@ -605,16 +623,27 @@ export default createStore({
             })
 
             req.addEventListener('load', () => {
-
-                resolve(req.response)
-
                 commit('createProjectLoading', 0);
+                try {
+                    resolve(JSON.parse(req.response))
+                } catch (e) {
+                    reject(e)
+                }
+            })
+
+            req.addEventListener('error', () => {
+                commit('createProjectLoading', 0);
+                reject(new Error('Network error'))
+            })
+            req.addEventListener('abort', () => {
+                commit('createProjectLoading', 0);
+                reject(new Error('Upload aborted'))
             })
 
             req.send(formData)
         })
 
-        // return new Promise((resolve) => {
+        // return new Promise((resolve, reject) => {
         //     fetch(`${API_URL}/project/`, {
         //         method: 'POST', 
         //         headers: {
@@ -632,7 +661,7 @@ export default createStore({
     // getProjectsByFilters({ commit }) {
         commit('setProjects', {})
 
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/project/${query}`, {
                 method: 'GET', 
                 headers: {
@@ -643,18 +672,22 @@ export default createStore({
                 if (!data.errors) {
                     commit('setProjects', data.projects)
                     resolve(data)
-                } else if (data.errors.find(error => error.code == 400)) {
-                    // commit('removeToken');
-                    // localStorage.removeItem('X-AUTH-TOKEN')
-                    // localStorage.removeItem('ROLE')
+                } else {
+                    reject(data.errors)
+                    if (data.errors.find(error => error.code == 400)) {
+                        // commit('removeToken');
+                        // localStorage.removeItem('X-AUTH-TOKEN')
+                        // localStorage.removeItem('ROLE')
+                    }
                 }
             })
+            .catch(reject)
         })
     },
 
     getProjects({ state, commit }) {
         commit('setProjects', {})
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/project/`, {
                 method: 'GET', 
                 headers: {
@@ -664,19 +697,23 @@ export default createStore({
             .then((response) => response.json()).then((data) => {
                 if (!data.errors) {
                     commit('setProjects', data.projects)
-                } else if (data.errors.find(error => error.code == 400)) {
-                    // commit('removeToken');
-                    // localStorage.removeItem('X-AUTH-TOKEN')
-                    // localStorage.removeItem('ROLE')
+                } else {
+                    reject(data.errors)
+                    if (data.errors.find(error => error.code == 400)) {
+                        // commit('removeToken');
+                        // localStorage.removeItem('X-AUTH-TOKEN')
+                        // localStorage.removeItem('ROLE')
+                    }
                 }
                 resolve(data)
             })
+            .catch(reject)
         })
     },
 
     getProjectsByCategoryID({ state, commit }, {categoryID}) {
         commit('setProjects', {})
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/project/?direction[0]=${categoryID}`, {
                 method: 'GET', 
                 headers: {
@@ -687,17 +724,21 @@ export default createStore({
                 if (!data.errors) {
                     commit('setProjects', data.projects)
                     resolve(data)
-                } else if (data.errors.find(error => error.code == 400)) {
-                    // commit('removeToken');
-                    // localStorage.removeItem('X-AUTH-TOKEN')
-                    // localStorage.removeItem('ROLE')
+                } else {
+                    reject(data.errors)
+                    if (data.errors.find(error => error.code == 400)) {
+                        // commit('removeToken');
+                        // localStorage.removeItem('X-AUTH-TOKEN')
+                        // localStorage.removeItem('ROLE')
+                    }
                 }
             })
+            .catch(reject)
         })
     },
 
     getProjectById({ state, commit }, {id}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/project/${id}`, {
                 method: 'GET', 
                 headers: {
@@ -708,17 +749,21 @@ export default createStore({
                 if (!data.errors) {
                     commit('setViewProject', data.project)
                     resolve(data)
-                } else if (data.errors.find(error => error.code == 400)) {
-                    // commit('removeToken');
-                    // localStorage.removeItem('X-AUTH-TOKEN')
-                    // localStorage.removeItem('ROLE')
+                } else {
+                    reject(data.errors)
+                    if (data.errors.find(error => error.code == 400)) {
+                        // commit('removeToken');
+                        // localStorage.removeItem('X-AUTH-TOKEN')
+                        // localStorage.removeItem('ROLE')
+                    }
                 }
             })
+            .catch(reject)
         })
     },
 
     removeProject({ state }, {id}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/project/${id}`, {
                 method: 'DELETE', 
                 headers: {
@@ -729,11 +774,12 @@ export default createStore({
                 // console.log(data);
                 resolve(data)
             })
+            .catch(reject)
         })
     },
 
     restoreProject({ state }, {id}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/archive/project/${id}/restore`, {
                 method: 'POST', 
                 headers: {
@@ -744,11 +790,12 @@ export default createStore({
                 // console.log(data);
                 resolve(data)
             })
+            .catch(reject)
         })
     },
 
     deleteProject({ state }, {id}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/archive/project/${id}/`, {
                 method: 'DELETE', 
                 headers: {
@@ -759,11 +806,12 @@ export default createStore({
                 // console.log(data);
                 resolve(data)
             })
+            .catch(reject)
         })
     },
 
     editProject({ state }, {formData, projectId}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/project/${projectId}`, {
                 method: 'POST', 
                 headers: {
@@ -775,11 +823,12 @@ export default createStore({
                 // console.log(data);
                 resolve(data)
             })
+            .catch(reject)
         })
     },
 
     getArchive({state, commit}) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/archive/`, {
                 method: 'GET',
                 headers: {
@@ -790,17 +839,21 @@ export default createStore({
                 if (!data.errors) {
                     commit('setArchive', data.projects)
                     resolve(data)
-                } else if (data.errors.find(error => error.code == 400)) {
-                    // commit('removeToken');
-                    // localStorage.removeItem('X-AUTH-TOKEN')
-                    // localStorage.removeItem('ROLE')
+                } else {
+                    reject(data.errors)
+                    if (data.errors.find(error => error.code == 400)) {
+                        // commit('removeToken');
+                        // localStorage.removeItem('X-AUTH-TOKEN')
+                        // localStorage.removeItem('ROLE')
+                    }
                 }
             })
+            .catch(reject)
         })
     },
 
     setPublic({ state }, { id, publicValue }) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             fetch(`${API_URL}/project/${id}/set-public`, {
                 method: 'PUT', 
                 body: JSON.stringify({ "public": publicValue }),
@@ -812,6 +865,7 @@ export default createStore({
                 // console.log(data);
                 resolve(data)
             })
+            .catch(reject)
         })
     },
 

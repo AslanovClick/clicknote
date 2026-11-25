@@ -78,11 +78,10 @@ export default {
     this.checkUrl();
 
     this.$store.dispatch('getProjectById', {id: this.projectId}).then(data => {
-      console.log('result: ', data);
-      if (data.project === null) {
-        this.$router.push('/404')
+      if (!data || data.project === null) {
+        this.$router.replace('/404')
       }
-    });
+    }).catch(() => this.$router.replace('/404'));
   },
 
   methods: {
@@ -100,7 +99,7 @@ export default {
 
       if (urlParams.split('')[0] !== 'p') {
         const url = setProjectUrl(urlParams);
-        this.$router.push(url)
+        this.$router.replace(url)
       }
     }
   },

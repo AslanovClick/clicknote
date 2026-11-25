@@ -132,15 +132,21 @@ export default {
     create(data) {
       this.loading = true;
 
-      this.$store.dispatch("createProject", { formData: data }).then((data) => {
-        this.loading = false;
-        if (data.errors) {
+      this.$store
+        .dispatch("createProject", { formData: data })
+        .then((data) => {
+          this.loading = false;
+          if (data.errors || !data.project) {
+            this.error();
+          } else {
+            this.success(data.project.name);
+            this.reset();
+          }
+        })
+        .catch(() => {
+          this.loading = false;
           this.error();
-        } else {
-          this.success(JSON.parse(data).project.name);
-          this.reset();
-        }
-      });
+        });
     },
   },
   mounted() {

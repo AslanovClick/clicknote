@@ -4,6 +4,7 @@
             v-for="user in sortedUsers"
             :key="user.id"
             :user="user"
+            :userID="userID"
             @removeUser="userID => $emit('removeUser', userID)"
         />
     </div>

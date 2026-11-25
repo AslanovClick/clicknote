@@ -249,6 +249,9 @@ export default {
         },
 
         removeFilter(filterType, id) {
+            const what = filterType === 'tag' ? 'этот тег' : 'это значение фильтра';
+            if (!window.confirm(`Удалить ${what}? Это действие нельзя отменить.`)) return;
+
             this.$store.dispatch('removeFilter', {filterType, id}).then(() => {
                 this.updateFilter(filterType)
             })

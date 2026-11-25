@@ -36,7 +36,7 @@
           </div>
           <div class="users__item_button users__item_button--remove"
               v-if="userID !== user.id"
-              @click="$emit('removeUser', user.id)"
+              @click="confirmRemove"
               >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path fill-rule="evenodd" clip-rule="evenodd" d="M11.1223 1.94633C11.3557 1.94633 11.55 2.13953 11.55 2.38612V2.61411C11.55 2.8547 11.3557 3.05389 11.1223 3.05389H1.17831C0.944316 3.05389 0.75 2.8547 0.75 2.61411V2.38612C0.75 2.13953 0.944316 1.94633 1.17831 1.94633H2.92774C3.28311 1.94633 3.59238 1.69314 3.67233 1.33675L3.76394 0.927568C3.90632 0.370187 4.3749 0 4.91175 0H7.38884C7.91985 0 8.39309 0.370187 8.53022 0.898769L8.62826 1.33615C8.70762 1.69314 9.01689 1.94633 9.37284 1.94633H11.1223ZM10.2338 10.2806C10.4164 8.57851 10.7362 4.53405 10.7362 4.49325C10.7478 4.37025 10.7076 4.25326 10.6276 4.15846C10.5419 4.07086 10.4333 4.01807 10.3137 4.01807H1.99137C1.87117 4.01807 1.75679 4.07086 1.67743 4.15846C1.59691 4.25326 1.55723 4.37025 1.56306 4.49325C1.56413 4.50075 1.57561 4.64319 1.59479 4.88133C1.68 5.93935 1.91736 8.88634 2.07073 10.2806C2.17927 11.3072 2.85325 11.9534 3.8295 11.9768C4.58284 11.9942 5.35893 12.0002 6.15254 12.0002C6.90004 12.0002 7.6598 11.9942 8.4359 11.9768C9.44599 11.9588 10.1194 11.3252 10.2338 10.2806Z" fill="var(--bgcolor-5)"/>
@@ -49,6 +49,8 @@
       <div class="users__item_roles">
         <select name="" class="users__item_roles_list"
             :value="this.user.role"
+            :disabled="userID === user.id"
+            :title="userID === user.id ? 'Нельзя изменить собственную роль' : ''"
             @change="updateRole">
             <option v-for="role in roles"
                 :key="role"
@@ -97,8 +99,25 @@ export default {
           return user.role === 'ROLE_ADMIN'
         },
 
+        userName() {
+            return [this.user.firstName, this.user.lastName].filter(Boolean).join(' ') || this.user.email
+        },
+
+        confirmRemove() {
+            if (window.confirm(`Удалить пользователя ${this.userName()}? Это действие нельзя отменить.`)) {
+                this.$emit('removeUser', this.user.id)
+            }
+        },
+
         updateRole(e) {
-            this.$store.dispatch('updateUserRole', {id: this.user.id, role: e.target.value})
+            const role = e.target.value
+            const title = this.roles.find(r => r.name === role)?.title || role
+            if (!window.confirm(`Сменить роль пользователя ${this.userName()} на «${title}»?`)) {
+                e.target.value = this.user.role
+                return
+            }
+            this.$store.dispatch('updateUserRole', {id: this.user.id, role})
+                .catch(() => { e.target.value = this.user.role })
         }
     },
 
