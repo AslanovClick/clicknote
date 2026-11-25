@@ -72,7 +72,7 @@
           </div>
           <input
             type="text"
-            placeholder="Поиск"
+            :placeholder="isPanelPage ? 'Поиск: работа, исполнитель, клиент, email' : 'Поиск'"
             v-model="inputValue"
             @input="search"
             @keydown.enter="enterPress"
@@ -80,7 +80,7 @@
             @focusout="searchFocused = false"
           />
         </label>
-        <div class="search-results" v-if="searchEnter === false">
+        <div class="search-results" v-if="searchEnter === false && !isPanelPage">
           <div class="search-results__help" v-if="inputValue.length !== 0">
             <span> Искать “{{ inputValue }}” </span>
             <div class="search-results__help_icon" @click="enterPress">
@@ -348,7 +348,8 @@ export default {
       ) {
         this.inputValue = this.inputValue.replace(/\s+$/g, " ");
       }
-      if (!this.inputValue.length) {
+      // In the admin panel the lists filter as you type; elsewhere search runs on Enter.
+      if (!this.inputValue.length || this.isPanelPage) {
         this.$emit("search", this.inputValue);
       }
     },

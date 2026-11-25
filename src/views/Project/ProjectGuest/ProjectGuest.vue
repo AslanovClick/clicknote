@@ -12,6 +12,27 @@
       </div>
       <div class="content" v-if="project">
 
+        <div class="info-bar" v-if="project.name">
+          <div class="info-bar__text">
+            <h1 class="info-bar__title">{{ project.name }}</h1>
+            <div class="info-bar__meta" v-if="projectMeta">{{ projectMeta }}</div>
+          </div>
+
+          <div class="info-bar__actions">
+            <a class="info-bar__button" href="/">Все работы</a>
+            <button class="info-bar__button" type="button" @click="copyLink">
+              {{ copied ? 'Ссылка скопирована' : 'Скопировать ссылку' }}
+            </button>
+            <a
+              v-if="projectURL"
+              class="info-bar__button info-bar__button--accent"
+              :href="projectURL"
+              target="_blank"
+              rel="noopener"
+            >Открыть в новой вкладке</a>
+          </div>
+        </div>
+
         <div class="project" :class="{'loaded': iframe.loaded}">
           <iframe :src="projectURL" width="100%" @load="iframeLoad" v-show="iframe"></iframe> 
 
@@ -38,7 +59,8 @@ export default {
     return {
       iframe: {
         loaded: false
-      }
+      },
+      copied: false
     }
   },
 
@@ -69,6 +91,16 @@ export default {
 
     projectURL() {
       return this.project.url || (this.project.images && this.project.images[0] && this.project.images[0].path);
+    },
+
+    projectMeta() {
+      return [this.project.direction?.name, this.project.type?.name].filter(Boolean).join(' · ');
+    }
+  },
+
+  watch: {
+    'project.name'(name) {
+      if (name) document.title = `${name} — Clicknote`;
     }
   },
 
@@ -85,6 +117,13 @@ export default {
   },
 
   methods: {
+    copyLink() {
+      navigator.clipboard.writeText(window.location.origin + window.location.pathname).then(() => {
+        this.copied = true;
+        setTimeout(() => (this.copied = false), 1500);
+      });
+    },
+
     iframeLoad() {
       if (this.iframe.loaded) return this.iframeLoaded();
       else return; // do nothing
@@ -136,9 +175,74 @@ export default {
   }
 }
 
+.info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: em(16);
+  flex-wrap: wrap;
+  margin-bottom: em(16);
+
+  &__text {
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: max(18px, 1.5em);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-color-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    margin-top: 4px;
+    font-size: max(13px, 0.875em);
+    color: var(--text-color-4);
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__button {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--bgcolor-2);
+    color: var(--text-color-1);
+    font: inherit;
+    font-size: max(13px, 0.875em);
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+
+    &:hover {
+      background: var(--bgcolor-7);
+    }
+
+    &--accent {
+      background: #ff381d;
+      color: #fff;
+
+      &:hover {
+        background: rgba(255, 56, 29, 0.85);
+      }
+    }
+  }
+}
+
 .content {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   padding-left: 3.125em;
   padding-right: 3.125em;
   padding-bottom: em(40);
@@ -336,6 +440,8 @@ export default {
 .project {
     width: 100%;
     height: 100%;
+    flex: 1;
+    min-height: 0;
     border-radius: 1em;
     overflow: hidden;
 

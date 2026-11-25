@@ -1,6 +1,6 @@
 <template>
   <div class="users">
-    <users-list :users="users" :userID='userID' 
+    <users-list :users="filteredUsers" :userID='userID' 
       @removeUser="removeUser"
       />
   </div>
@@ -18,7 +18,20 @@ export default {
     }
   },
 
+  props: ['searchInputValue'],
+
   computed: {
+    filteredUsers() {
+      const users = Array.isArray(this.users) ? this.users : [];
+      const query = (this.searchInputValue || '').trim().toLowerCase();
+      if (!query) return users;
+
+      return users.filter(user => [
+        `${user.firstName || ''} ${user.lastName || ''}`,
+        user.email,
+      ].some(value => value && value.toLowerCase().includes(query)));
+    },
+
     ...mapState({
       users: state => state.users,
       userID: state => state.user.id

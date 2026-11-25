@@ -1,6 +1,6 @@
 <template>
   <div class="project__img">
-    <img :src="previewSrc" alt="" />
+    <img :src="previewSrc" alt="" loading="lazy" decoding="async" />
   </div>
 </template>
 

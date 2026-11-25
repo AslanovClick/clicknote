@@ -12,7 +12,7 @@
             v-if="isAdminRole || isExecutorRole && user?.id === item.executor?.id"
             >
             <div class="item__img">
-                <img :src="item.preview" alt="">
+                <img :src="item.preview" alt="" loading="lazy">
             </div>
             <div class="item__title">
                 <span>

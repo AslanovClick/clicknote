@@ -15,7 +15,7 @@
     />
 
     <works-archive
-      :items="archiveProjects"
+      :items="archiveResult"
       :listElement="listElement"
       :itemInsideArchive="itemInsideArchive"
       @removeFromArchive="removeFromArchive"
@@ -65,22 +65,35 @@ export default {
       archiveProjects: state => state.archiveProjects,
     }),
 
+    // Only the works list has to be loaded: an empty archive used to keep the whole tab hidden.
     projectsLoaded() {
-      return Object.keys(this.projects).length > 0 && Object.keys(this.archiveProjects).length > 0;
+      return Object.keys(this.projects).length > 0;
     },
 
     searchResult() {
-        if (!this.searchInputValue.length) {
-            return this.projects.length ? this.projects : []
-        }
+      return this.filterBySearch(this.projects);
+    },
 
-        const result = this.projects.length ? this.projects.filter(project => project.name.toLowerCase().includes(this.searchInputValue.toLowerCase())) : [];
-
-        return result;
+    archiveResult() {
+      return this.filterBySearch(this.archiveProjects);
     },
   },
 
   methods: {
+    // Matches the search text against the work's name, executor, client and direction.
+    filterBySearch(list) {
+      const items = Array.isArray(list) ? list : [];
+      const query = (this.searchInputValue || '').trim().toLowerCase();
+      if (!query) return items;
+
+      return items.filter(project => [
+        project.name,
+        project.executor && `${project.executor.firstName || ''} ${project.executor.lastName || ''}`,
+        project.client?.name,
+        project.direction?.name,
+      ].some(value => value && value.toLowerCase().includes(query)));
+    },
+
     addToArchive(itemID) {
       this.$store.dispatch('removeProject', {id: itemID}).then(() => {
         this.$store.dispatch('getProjects');

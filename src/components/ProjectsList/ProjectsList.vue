@@ -4,14 +4,21 @@
       <div class="list__projects" :class="{ loaded: projectsLoaded }">
         <div class="list__projects_wrapper">
           <project-item
-            v-for="(project, index) in projectsView"
-            :key="index"
+            v-for="project in projectsView"
+            :key="project.id"
             :project="project"
             @modalEditOpen="(project) => $emit('modalEditOpen', project)"
             @mobileHover="(id) => (mobileHoverElemId = id)"
             :mobileHoverElemId="mobileHoverElemId"
             class="list__project"
           />
+        </div>
+
+        <div v-if="hasMore" ref="more" class="list__more">
+          <button class="list__more_button" @click="showMore">
+            Показать ещё
+            <span class="list__more_count">{{ shownCount }} из {{ searchResult.length }}</span>
+          </button>
         </div>
       </div>
     </template>
@@ -26,7 +33,8 @@ import ProjectItem from "@/components/ProjectItem/ProjectItem.vue";
 import SearchError from "../SearchError/SearchError.vue";
 
 import { isLoggedUser } from "@/Hooks/isLoggedUser";
-// import {updateProjects} from '@/Hooks/updateProjects'
+
+const PAGE_SIZE = 48;
 
 export default {
   components: {
@@ -39,6 +47,9 @@ export default {
   data() {
     return {
       mobileHoverElemId: null,
+      // The grid used to stop at 50 projects; now it grows in pages as you scroll.
+      limit: PAGE_SIZE,
+      observer: null,
     };
   },
 
@@ -63,27 +74,26 @@ export default {
     },
 
     searchResult() {
+      const projects = Array.from(this.projects);
       if (!this.searchInputValue.length) {
-        const projects = Array.from(this.projects);
-        projects.splice(50, projects.length - 50);
-
-        return projects.length ? projects : [];
+        return projects;
       }
-      const result = this.projects.length
-        ? this.projects.filter((project) =>
-            project.name
-              .toLowerCase()
-              .includes(this.searchInputValue.toLowerCase())
-          )
-        : [];
-
-      result.splice(50, result.length - 50);
-
-      return result;
+      const query = this.searchInputValue.toLowerCase();
+      return projects.filter((project) =>
+        project.name.toLowerCase().includes(query)
+      );
     },
 
     projectsView() {
-      return this.searchResult;
+      return this.searchResult.slice(0, this.limit);
+    },
+
+    shownCount() {
+      return this.projectsView.length;
+    },
+
+    hasMore() {
+      return this.searchResult.length > this.limit;
     },
 
     isAdminRole() {
@@ -109,9 +119,44 @@ export default {
     },
   },
 
-  // created() {
-  //   updateProjects();
-  // },
+  methods: {
+    showMore() {
+      this.limit += PAGE_SIZE;
+    },
+
+    // Loads the next page automatically when the "show more" row scrolls into view.
+    observeMore() {
+      if (this.observer) this.observer.disconnect();
+      if (!this.$refs.more || !("IntersectionObserver" in window)) return;
+      this.observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) this.showMore();
+        },
+        { rootMargin: "600px 0px" }
+      );
+      this.observer.observe(this.$refs.more);
+    },
+  },
+
+  watch: {
+    stateProjects() {
+      this.limit = PAGE_SIZE;
+    },
+    searchInputValue() {
+      this.limit = PAGE_SIZE;
+    },
+    hasMore() {
+      this.$nextTick(this.observeMore);
+    },
+  },
+
+  mounted() {
+    this.observeMore();
+  },
+
+  beforeUnmount() {
+    if (this.observer) this.observer.disconnect();
+  },
 };
 </script>
 
@@ -137,7 +182,36 @@ export default {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       grid-gap: em(20);
-      grid-row-gap: em(60);
+      grid-row-gap: em(32);
+    }
+  }
+
+  &__more {
+    display: flex;
+    justify-content: center;
+    padding-bottom: 4em;
+
+    &_button {
+      display: inline-flex;
+      align-items: center;
+      gap: em(10);
+      padding: em(12) em(24);
+      border: none;
+      border-radius: em(12);
+      background: var(--bgcolor-2);
+      color: var(--text-color-1);
+      font: inherit;
+      font-size: em(14);
+      cursor: pointer;
+      transition: background 0.2s ease-in-out;
+
+      &:hover {
+        background: var(--bgcolor-7);
+      }
+    }
+
+    &_count {
+      opacity: 0.5;
     }
   }
 

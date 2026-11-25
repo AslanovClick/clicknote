@@ -12,7 +12,17 @@ import ProjectsList from "@/components/ProjectsList/ProjectsList.vue";
 import HomeButtons from "@/components/HomeButtons/HomeButtons.vue";
 
 import { getUrlData } from "@/Hooks/getUrlData";
-// import { updateProjects } from "@/Hooks/updateProjects";
+
+// Icon for a direction that was added in the admin panel after these tabs were drawn.
+const GENERIC_ICON = {
+  svg: {
+    width: 28,
+    height: 28,
+    path: {
+      d: "M3 1h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Zm14 0h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2ZM3 15h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Zm14 0h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z",
+    },
+  },
+};
 
 export default {
   name: "HomeContent",
@@ -130,6 +140,39 @@ export default {
   },
 
   methods: {
+    // Builds the tabs from the directions in the API, so a direction added in the
+    // admin panel gets a tab. Known directions keep their order and icons; if the
+    // request fails, the built-in tabs stay as they are.
+    loadDirections() {
+      this.$store
+        .dispatch("getFilter", { filterType: "direction" })
+        .then((data) => {
+          const directions = Object.values(data || {}).flat();
+          if (!directions.length) return;
+
+          const [latest, ...known] = this.buttons;
+          const knownById = Object.fromEntries(known.map((b) => [b.filterId, b]));
+          const order = known.map((b) => b.filterId);
+          const sorted = [...directions].sort((a, b) => {
+            const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
+            return (ia === -1 ? Infinity : ia) - (ib === -1 ? Infinity : ib);
+          });
+
+          this.buttons = [
+            latest,
+            ...sorted.map((direction, index) => ({
+              id: index + 1,
+              title: direction.name,
+              icon: knownById[direction.id]?.icon || GENERIC_ICON,
+              active: false,
+              filterId: direction.id,
+            })),
+          ];
+          this.updateCurrentDirection();
+        })
+        .catch(() => {});
+    },
+
     setCurrentButton(index) {
       this.buttons.forEach(
         (button, buttonIndex) => (button.active = buttonIndex === index)
@@ -153,7 +196,15 @@ export default {
       const filterIdFromLS = +localStorage.getItem("currentDirection");
       const urlData = getUrlData();
 
-      if (urlData) {
+      // A URL filtered only by one direction (what the tabs produce) keeps its tab highlighted.
+      const params = urlData ? new URLSearchParams(urlData) : null;
+      const onlyDirection =
+        params && [...params.keys()].length === 1 && params.get("direction[0]");
+
+      if (onlyDirection) {
+        this.buttons.forEach((button) => (button.active = button.filterId === +onlyDirection));
+        if (!this.buttons.some((button) => button.active)) this.resetButtons();
+      } else if (urlData) {
         this.resetButtons();
       } else if (filterIdFromLS) {
         this.buttons.find(
@@ -165,13 +216,7 @@ export default {
 
   created() {
     this.updateCurrentDirection();
-    // updateProjects();
-
-    console.log('created');
+    this.loadDirections();
   },
-
-  updated() {
-    console.log('updated');
-  }
 };
 </script>
